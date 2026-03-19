@@ -1,0 +1,14 @@
+# Repository root (git root is hciW26; hci/.gitignore still applies under hci/)
+
+# --- Course textbook & similar materials (copyrighted / large) — keep local only ---
+# Do not commit the Wiley PDF or copies. Place local copies under course-textbook/ if needed.
+course-textbook/
+
+# Common filenames for Sharp, Preece & Rogers (2019) and variants
+**/Helen Sharp*.pdf
+**/Interaction Design*.pdf
+**/*Beyond Human-Computer Interaction*.pdf
+**/*Interaction_Design*.pdf
+
+# Design principles draft / report notes — keep local only
+docs/DESIGN_PRINCIPLES_FROM_TEXTBOOK.md
