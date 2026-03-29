@@ -1,18 +1,50 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useGameWords } from "../../gameWords";
+
+const MIN_WORDS = 5;
+
+function nonEmptyWordCount(words: string[]): number {
+  return words.map((w) => w.trim()).filter(Boolean).length;
+}
 
 export default function SetupCustomPage() {
   const { words, setWords } = useGameWords();
+  const router = useRouter();
+  const [minWordsMessage, setMinWordsMessage] = useState<string | null>(null);
+
+  const filledCount = nonEmptyWordCount(words);
 
   useEffect(() => {
-    if (words.length === 0) setWords(Array.from({ length: 10 }, () => ""));
-  }, [setWords, words.length]);
+    if (filledCount >= MIN_WORDS) setMinWordsMessage(null);
+  }, [filledCount]);
+
+  function handleGo() {
+    const n = nonEmptyWordCount(words);
+    if (n < MIN_WORDS) {
+      const need = MIN_WORDS - n;
+      setMinWordsMessage(
+        `Add at least ${MIN_WORDS} words. You have ${n} — add ${need} more.`,
+      );
+      return;
+    }
+    setMinWordsMessage(null);
+    router.push("/home");
+  }
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-zinc-50 px-6 pb-16 pt-10 dark:bg-zinc-950">
+      <div className="mx-auto mb-4 w-full max-w-5xl">
+        <Link
+          href="/setup/select"
+          className="text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-50"
+        >
+          ← Back to premade or custom
+        </Link>
+      </div>
       <h1 className="text-center text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
         Spelling Central
       </h1>
@@ -42,13 +74,27 @@ export default function SetupCustomPage() {
           </button>
         </div>
 
-        <div className="mt-10 flex justify-center">
-          <Link
-            href="/home"
+        <div className="mt-10 flex flex-col items-center gap-3">
+          {minWordsMessage ? (
+            <p
+              className="max-w-md text-center text-sm font-medium text-red-700 dark:text-red-400"
+              role="alert"
+            >
+              {minWordsMessage}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={handleGo}
             className="inline-flex min-w-[140px] items-center justify-center rounded-full bg-zinc-900 px-10 py-4 text-lg font-semibold text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             GO
-          </Link>
+          </button>
+          {filledCount < MIN_WORDS ? (
+            <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">
+              Need at least {MIN_WORDS} words to continue ({filledCount}/{MIN_WORDS}).
+            </p>
+          ) : null}
         </div>
       </main>
     </div>

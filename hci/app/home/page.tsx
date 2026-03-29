@@ -2,8 +2,16 @@ import Link from "next/link";
 
 export default function HomePage() {
   return (
-    <div className="flex min-h-full flex-1 items-center justify-center bg-zinc-50 px-6 py-12 dark:bg-zinc-950">
-      <main className="w-full max-w-5xl">
+    <div className="flex min-h-full flex-1 flex-col bg-zinc-50 px-6 py-12 dark:bg-zinc-950">
+      <div className="mx-auto w-full max-w-5xl shrink-0">
+        <Link
+          href="/setup/select"
+          className="text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-50"
+        >
+          ← Back to word list
+        </Link>
+      </div>
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <Link
             href="/wordsearch"

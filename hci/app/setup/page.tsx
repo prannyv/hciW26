@@ -18,6 +18,14 @@ export default function SetupPage() {
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-zinc-50 px-6 pb-16 pt-10 dark:bg-zinc-950">
+      <div className="mx-auto mb-4 w-full max-w-5xl">
+        <Link
+          href="/setup/select"
+          className="text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-50"
+        >
+          ← Back to premade or custom
+        </Link>
+      </div>
       <h1 className="text-center text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
         Spelling Central
       </h1>
