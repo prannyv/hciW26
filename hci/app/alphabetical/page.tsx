@@ -2,7 +2,6 @@
 
 import {
   DndContext,
-  KeyboardSensor,
   PointerSensor,
   closestCenter,
   useSensor,
@@ -14,13 +13,12 @@ import {
   SortableContext,
   arrayMove,
   rectSortingStrategy,
-  sortableKeyboardCoordinates,
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGameWords } from "../gameWords";
 
 type WordItem = { id: string; word: string };
@@ -44,12 +42,23 @@ function wordsToItems(words: string[]): WordItem[] {
 }
 
 
-function boxClasses(checkState: CheckState, isDragging: boolean): string {
+function boxClasses(
+  checkState: CheckState,
+  isDragging: boolean,
+  isSelected: boolean,
+  isHeld: boolean,
+): string {
   const base =
     "flex flex-col items-center justify-center gap-1 rounded-xl border px-3 py-3 text-center shadow-sm touch-none transition-colors duration-700 cursor-grab active:cursor-grabbing select-none";
 
   if (isDragging) {
     return `${base} border-zinc-300 bg-zinc-800 opacity-90 shadow-lg ring-2 ring-zinc-400 dark:ring-zinc-500`;
+  }
+  if (isHeld) {
+    return `${base} border-amber-400 bg-amber-50 ring-2 ring-amber-400 ring-offset-2 ring-offset-zinc-50 dark:border-amber-500 dark:bg-amber-950 dark:ring-amber-500 dark:ring-offset-zinc-950`;
+  }
+  if (checkState === "idle" && isSelected) {
+    return `${base} border-zinc-200 bg-white ring-2 ring-blue-500 ring-offset-2 ring-offset-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:ring-blue-400 dark:ring-offset-zinc-950`;
   }
   if (checkState === "correct") return `${base} border-green-800 bg-green-900`;
   if (checkState === "incorrect") return `${base} border-red-800 bg-red-900`;
@@ -73,11 +82,17 @@ function SortableWordBox({
   position,
   word,
   checkState,
+  isSelected,
+  isHeld,
+  onSelect,
 }: {
   id: string;
   position: number;
   word: string;
   checkState: CheckState;
+  isSelected: boolean;
+  isHeld: boolean;
+  onSelect: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
@@ -91,10 +106,13 @@ function SortableWordBox({
     <div
       ref={setNodeRef}
       style={style}
-      className={boxClasses(checkState, isDragging)}
-      aria-label={`Position ${position}, ${word}. Drag to reorder.`}
+      className={boxClasses(checkState, isDragging, isSelected, isHeld)}
+      aria-label={`Position ${position}, ${word}.${isHeld ? " Held — use arrow keys to move, Space to drop." : isSelected ? " Selected." : ""}`}
+      aria-selected={isSelected}
+      onClick={() => onSelect()}
       {...attributes}
       {...listeners}
+      tabIndex={-1}
     >
       <span
         className={`font-semibold tabular-nums ${numberClasses(checkState, isDragging)}`}
@@ -141,6 +159,13 @@ function RulesDropdown() {
             <ul className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
               <li>• Words from your list are shown in a random order.</li>
               <li>• Drag and drop the boxes to arrange them in alphabetical order.</li>
+              <li>
+                • <strong>Keyboard:</strong> tab to the tile grid to focus it. Use{" "}
+                <strong>arrow keys</strong> to move the blue selection ring between tiles.
+                Press <strong>Space</strong> to pick up the selected tile (turns amber) —
+                then arrow keys <strong>move</strong> it. Press <strong>Space</strong> again to drop.
+                <strong>Escape</strong> cancels.
+              </li>
               <li>• When you&apos;re ready, press <strong>Check Answers</strong>.</li>
               <li>• Green = correct position · Red = incorrect position.</li>
               <li>• Moving a box resets all colours so you can try again.</li>
@@ -191,20 +216,93 @@ function CongratsModal({ onPlayAgain, onGoHome }: { onPlayAgain: () => void; onG
   );
 }
 
+const GRID_COLS = 5;
+
 /** Remount when parent `key` (bank content) changes for a fresh random draw. */
 function AlphabeticalPlay({ words, onGoHome }: { words: string[]; onGoHome: () => void }) {
   const [items, setItems] = useState<WordItem[]>(() => wordsToItems(pickRandomWords(words, 20)));
   const [checkStates, setCheckStates] = useState<CheckState[]>([]);
   const [showCongrats, setShowCongrats] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [heldId, setHeldId] = useState<string | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  // Auto-focus the grid so arrow keys work immediately without clicking
+  useEffect(() => {
+    gridRef.current?.focus();
+  }, []);
+
+  // Keep selectedId valid when items change (e.g. Play Again resets the list)
+  useEffect(() => {
+    if (items.length === 0) { setSelectedId(null); return; }
+    setSelectedId((prev) => {
+      if (prev === null) return null;                        // don't auto-select on mount
+      if (items.some((i) => i.id === prev)) return prev;   // still valid
+      return null;                                          // item gone, deselect
+    });
+  }, [items]);
+
+  const handleGridKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const n = items.length;
+      if (n === 0) return;
+
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+        e.preventDefault();
+        // First arrow press with nothing selected → select first tile
+        const anchorId = heldId ?? selectedId;
+        if (!anchorId) {
+          setSelectedId(items[0].id);
+          return;
+        }
+        const idx = items.findIndex((i) => i.id === anchorId);
+        if (idx === -1) return;
+        const row = Math.floor(idx / GRID_COLS);
+        const col = idx % GRID_COLS;
+        let next = -1;
+        if (e.key === "ArrowLeft" && col > 0) next = idx - 1;
+        else if (e.key === "ArrowRight" && col < GRID_COLS - 1 && idx + 1 < n) next = idx + 1;
+        else if (e.key === "ArrowUp" && row > 0) next = idx - GRID_COLS;
+        else if (e.key === "ArrowDown" && idx + GRID_COLS < n) next = idx + GRID_COLS;
+        if (next === -1) return;
+        if (heldId) {
+          // Move held tile to adjacent slot
+          setCheckStates([]);
+          setItems((prev) => arrayMove(prev, idx, next));
+          // selectedId stays as heldId (it moved with the tile)
+        } else {
+          setSelectedId(items[next].id);
+        }
+        return;
+      }
+
+      if (e.key === " ") {
+        e.preventDefault();
+        if (heldId) {
+          setHeldId(null);
+        } else if (selectedId) {
+          setHeldId(selectedId);
+          setCheckStates([]);
+        }
+        return;
+      }
+
+      if (e.key === "Escape" && heldId) {
+        e.preventDefault();
+        setHeldId(null);
+      }
+    },
+    [items, selectedId, heldId],
   );
 
   const handleDragStart = useCallback((_event: DragStartEvent) => {
     // Two rAF calls let the browser paint the current colored state first,
     // so transition-colors can animate the change rather than jumping instantly.
+    setHeldId(null);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => setCheckStates([]));
     });
@@ -238,6 +336,7 @@ function AlphabeticalPlay({ words, onGoHome }: { words: string[]; onGoHome: () =
   const handlePlayAgain = useCallback(() => {
     setShowCongrats(false);
     setCheckStates([]);
+    setHeldId(null);
     setItems(wordsToItems(pickRandomWords(words, 20)));
   }, [words]);
 
@@ -263,16 +362,28 @@ function AlphabeticalPlay({ words, onGoHome }: { words: string[]; onGoHome: () =
           onDragEnd={handleDragEnd}
         >
           <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
-            <div className="grid flex-1 grid-cols-5 gap-3" style={{ gridAutoRows: "1fr" }}>
-              {items.map((item, i) => (
-                <SortableWordBox
-                  key={item.id}
-                  id={item.id}
-                  position={i + 1}
-                  word={item.word}
-                  checkState={checkStates[i] ?? "idle"}
-                />
-              ))}
+            <div
+              ref={gridRef}
+              className="rounded-lg p-1 outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500"
+              tabIndex={0}
+              role="group"
+              aria-label="Word tiles. Arrow keys move selection. Space to pick up or drop a tile. Drag tiles to reorder."
+              onKeyDown={handleGridKeyDown}
+            >
+              <div className="grid flex-1 grid-cols-5 gap-3" style={{ gridAutoRows: "1fr" }}>
+                {items.map((item, i) => (
+                  <SortableWordBox
+                    key={item.id}
+                    id={item.id}
+                    position={i + 1}
+                    word={item.word}
+                    checkState={checkStates[i] ?? "idle"}
+                    isSelected={item.id === selectedId}
+                    isHeld={item.id === heldId}
+                    onSelect={() => setSelectedId(item.id)}
+                  />
+                ))}
+              </div>
             </div>
           </SortableContext>
         </DndContext>
