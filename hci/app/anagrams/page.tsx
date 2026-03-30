@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { markGameCompleted } from "../gameCompletions";
 import { useGameWords } from "../gameWords";
 
 /* ---------------- Helpers ---------------- */
@@ -126,7 +127,15 @@ return (
 
 /* ---------------- Game ---------------- */
 
-function AnagramGame({ words, onGoHome }: any) {
+function AnagramGame({
+  words,
+  bankKey,
+  onGoHome,
+}: {
+  words: string[];
+  bankKey: string;
+  onGoHome: () => void;
+}) {
   const gameWords = useMemo(() => pickRandomWords(words, 10), [words]);
 
   const [index, setIndex] = useState(0);
@@ -139,6 +148,10 @@ function AnagramGame({ words, onGoHome }: any) {
 
   const [retryUsed, setRetryUsed] = useState(false);
   const [showCongrats, setShowCongrats] = useState(false);
+
+  useEffect(() => {
+    if (showCongrats && bankKey) markGameCompleted(bankKey, "anagrams");
+  }, [showCongrats, bankKey]);
 
   const currentWord = gameWords[index] ?? null;
   const selectedIds = new Set(selected.map((t) => t.id));
@@ -413,6 +426,7 @@ export default function AnagramsPage() {
         <AnagramGame
           key={bankKey}
           words={words}
+          bankKey={bankKey}
           onGoHome={() => router.push("/home")}
         />
       </div>

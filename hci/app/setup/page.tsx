@@ -23,7 +23,7 @@ export default function SetupPage() {
           href="/setup/select"
           className="text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-50"
         >
-          ← Back to premade or custom
+          ← Back
         </Link>
       </div>
       <h1 className="text-center text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -55,7 +55,7 @@ export default function SetupPage() {
           </select>
         </div>
 
-        <div className="mx-auto grid w-fit grid-flow-col grid-rows-10 gap-3">
+        <div className="mx-auto grid w-fit grid-flow-col grid-rows-6 gap-3">
           {words.map((value, i) => (
             <input
               key={i}

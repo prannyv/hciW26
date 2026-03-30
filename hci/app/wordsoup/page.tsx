@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { markGameCompleted } from "../gameCompletions";
 import { useGameWords } from "../gameWords";
 
 type Phase = "unscramble" | "find";
@@ -503,9 +504,11 @@ function FindPhase({
 
 function WordSoupPlay({
   words,
+  bankKey,
   onGoHome,
 }: {
   words: string[];
+  bankKey: string;
   onGoHome: () => void;
 }) {
   const gameWords = useMemo(() => pickRandomWords(words, 8), [words]);
@@ -513,6 +516,10 @@ function WordSoupPlay({
   const [phase, setPhase] = useState<Phase>("unscramble");
   const [score, setScore] = useState(0);
   const [showCongrats, setShowCongrats] = useState(false);
+
+  useEffect(() => {
+    if (showCongrats && bankKey) markGameCompleted(bankKey, "wordsoup");
+  }, [showCongrats, bankKey]);
 
   const currentWord = gameWords[currentIndex] ?? "";
   const progress = (currentIndex / gameWords.length) * 100;
@@ -660,6 +667,7 @@ export default function WordSoupPage() {
         <WordSoupPlay
           key={bankKey}
           words={words}
+          bankKey={bankKey}
           onGoHome={() => router.push("/home")}
         />
       </div>

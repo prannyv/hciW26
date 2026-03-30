@@ -7,7 +7,6 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -19,6 +18,7 @@ import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { markGameCompleted } from "../gameCompletions";
 import { useGameWords } from "../gameWords";
 
 type WordItem = { id: string; word: string };
@@ -44,15 +44,15 @@ function wordsToItems(words: string[]): WordItem[] {
 
 function boxClasses(
   checkState: CheckState,
-  isDragging: boolean,
+  isLifted: boolean,
   isSelected: boolean,
   isHeld: boolean,
 ): string {
   const base =
     "flex flex-col items-center justify-center gap-1 rounded-xl border px-3 py-3 text-center shadow-sm touch-none transition-colors duration-700 cursor-grab active:cursor-grabbing select-none";
 
-  if (isDragging) {
-    return `${base} border-zinc-300 bg-zinc-800 opacity-90 shadow-lg ring-2 ring-zinc-400 dark:ring-zinc-500`;
+  if (isLifted) {
+    return `${base} border-zinc-400 bg-zinc-200 shadow-md ring-2 ring-zinc-400/80 dark:border-zinc-500 dark:bg-zinc-600 dark:ring-zinc-400/50`;
   }
   if (isHeld) {
     return `${base} border-amber-400 bg-amber-50 ring-2 ring-amber-400 ring-offset-2 ring-offset-zinc-50 dark:border-amber-500 dark:bg-amber-950 dark:ring-amber-500 dark:ring-offset-zinc-950`;
@@ -65,14 +65,14 @@ function boxClasses(
   return `${base} border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900`;
 }
 
-function numberClasses(checkState: CheckState, isDragging: boolean): string {
-  if (isDragging || checkState === "idle") return "text-zinc-500 dark:text-zinc-400";
+function numberClasses(checkState: CheckState, isLifted: boolean): string {
+  if (isLifted || checkState === "idle") return "text-zinc-700 dark:text-zinc-100";
   if (checkState === "correct") return "text-green-300";
   return "text-red-300";
 }
 
-function wordClasses(checkState: CheckState, isDragging: boolean): string {
-  if (isDragging || checkState === "idle") return "text-zinc-900 dark:text-zinc-50";
+function wordClasses(checkState: CheckState, isLifted: boolean): string {
+  if (isLifted || checkState === "idle") return "text-zinc-900 dark:text-zinc-50";
   if (checkState === "correct") return "text-green-100";
   return "text-red-100";
 }
@@ -95,6 +95,8 @@ function SortableWordBox({
   onSelect: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const [pressing, setPressing] = useState(false);
+  const isLifted = isDragging || pressing;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -106,22 +108,29 @@ function SortableWordBox({
     <div
       ref={setNodeRef}
       style={style}
-      className={boxClasses(checkState, isDragging, isSelected, isHeld)}
+      className={boxClasses(checkState, isLifted, isSelected, isHeld)}
       aria-label={`Position ${position}, ${word}.${isHeld ? " Held — use arrow keys to move, Space to drop." : isSelected ? " Selected." : ""}`}
       aria-selected={isSelected}
       onClick={() => onSelect()}
       {...attributes}
       {...listeners}
+      onPointerDown={(e) => {
+        (listeners as { onPointerDown?: (ev: React.PointerEvent) => void } | undefined)?.onPointerDown?.(e);
+        setPressing(true);
+      }}
+      onPointerUp={() => setPressing(false)}
+      onPointerLeave={() => setPressing(false)}
+      onPointerCancel={() => setPressing(false)}
       tabIndex={-1}
     >
       <span
-        className={`font-semibold tabular-nums ${numberClasses(checkState, isDragging)}`}
+        className={`font-semibold tabular-nums ${numberClasses(checkState, isLifted)}`}
         style={{ fontSize: "clamp(0.45rem, min(1vw, 1.4vh), 0.875rem)" }}
       >
         {position}
       </span>
       <span
-        className={`break-words font-medium ${wordClasses(checkState, isDragging)}`}
+        className={`break-words font-medium ${wordClasses(checkState, isLifted)}`}
         style={{ fontSize: "clamp(0.6rem, min(1.8vw, 2.4vh), 1.25rem)" }}
       >
         {word}
@@ -216,10 +225,18 @@ function CongratsModal({ onPlayAgain, onGoHome }: { onPlayAgain: () => void; onG
   );
 }
 
-const GRID_COLS = 5;
+const GRID_COLS = 4;
 
 /** Remount when parent `key` (bank content) changes for a fresh random draw. */
-function AlphabeticalPlay({ words, onGoHome }: { words: string[]; onGoHome: () => void }) {
+function AlphabeticalPlay({
+  words,
+  bankKey,
+  onGoHome,
+}: {
+  words: string[];
+  bankKey: string;
+  onGoHome: () => void;
+}) {
   const [items, setItems] = useState<WordItem[]>(() => wordsToItems(pickRandomWords(words, 20)));
   const [checkStates, setCheckStates] = useState<CheckState[]>([]);
   const [showCongrats, setShowCongrats] = useState(false);
@@ -299,7 +316,7 @@ function AlphabeticalPlay({ words, onGoHome }: { words: string[]; onGoHome: () =
     [items, selectedId, heldId],
   );
 
-  const handleDragStart = useCallback((_event: DragStartEvent) => {
+  const handleDragStart = useCallback(() => {
     // Two rAF calls let the browser paint the current colored state first,
     // so transition-colors can animate the change rather than jumping instantly.
     setHeldId(null);
@@ -329,9 +346,10 @@ function AlphabeticalPlay({ words, onGoHome }: { words: string[]; onGoHome: () =
     );
     setCheckStates(states);
     if (states.every((s) => s === "correct")) {
+      markGameCompleted(bankKey, "alphabetical");
       setShowCongrats(true);
     }
-  }, [items]);
+  }, [items, bankKey]);
 
   const handlePlayAgain = useCallback(() => {
     setShowCongrats(false);
@@ -370,7 +388,7 @@ function AlphabeticalPlay({ words, onGoHome }: { words: string[]; onGoHome: () =
               aria-label="Word tiles. Arrow keys move selection. Space to pick up or drop a tile. Drag tiles to reorder."
               onKeyDown={handleGridKeyDown}
             >
-              <div className="grid flex-1 grid-cols-5 gap-3" style={{ gridAutoRows: "1fr" }}>
+              <div className="grid flex-1 grid-cols-4 gap-3" style={{ gridAutoRows: "1fr" }}>
                 {items.map((item, i) => (
                   <SortableWordBox
                     key={item.id}
@@ -388,7 +406,7 @@ function AlphabeticalPlay({ words, onGoHome }: { words: string[]; onGoHome: () =
           </SortableContext>
         </DndContext>
 
-        <div className="mt-6 flex justify-center">
+        <div className="mt-6 flex flex-col items-center gap-3">
           <button
             type="button"
             onClick={handleCheckAnswers}
@@ -396,6 +414,13 @@ function AlphabeticalPlay({ words, onGoHome }: { words: string[]; onGoHome: () =
           >
             Check Answers
           </button>
+          {checkStates.length > 0 &&
+            !checkStates.every((s) => s === "correct") &&
+            !showCongrats && (
+              <p className="max-w-md text-center text-sm text-zinc-600 dark:text-zinc-400">
+                Keep trying — rearrange the tiles and press Check Answers again when you&apos;re ready.
+              </p>
+            )}
         </div>
       </main>
     </>
@@ -455,6 +480,7 @@ function AlphabeticalPageInner({ words, bankKey }: { words: string[]; bankKey: s
         <AlphabeticalPlay
           key={bankKey}
           words={words}
+          bankKey={bankKey}
           onGoHome={() => router.push("/home")}
         />
       </div>
