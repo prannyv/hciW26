@@ -306,7 +306,7 @@ function AnagramGame({
               <div className="flex items-center gap-3">
                 {streak >= 2 && (
                   <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-600 dark:bg-orange-900/40 dark:text-orange-400">
-                    {streak} streak
+                    🔥 {streak} streak
                   </span>
                 )}
                 <span>{score} correct</span>
