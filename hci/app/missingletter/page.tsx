@@ -16,24 +16,22 @@ function pickRandomWords(bank: string[], take: number): string[] {
   return copy.slice(0, Math.min(take, copy.length));
 }
 
-function getMissingCount(word: string, grade: string | null): number {
-  let count: number;
-  if (grade === "1") count = 1;
-  else if (grade === "2") count = 2;
-  else if (grade === "3") count = 3;
-  else if (word.length < 6) count = 1;
-  else if (word.length <= 9) count = 2;
-  else count = 3;
-  return Math.min(count, Math.max(1, Math.floor(word.length / 2)));
+function removeRandomLetter(word: string) {
+  const index = Math.floor(Math.random() * word.length);
+  const missing = word[index];
+  const display = word.slice(0, index) + "_" + word.slice(index + 1);
+  return { display, missing };
 }
 
-function pickBlankIndices(word: string, count: number): number[] {
-  const indices = Array.from({ length: word.length }, (_, i) => i);
-  for (let i = indices.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [indices[i], indices[j]] = [indices[j], indices[i]];
+function generateOptions(correct: string) {
+  const alphabet = "abcdefghijklmnopqrstuvwxyz";
+  const options = new Set<string>();
+  options.add(correct);
+  while (options.size < 4) {
+    const rand = alphabet[Math.floor(Math.random() * 26)];
+    options.add(rand);
   }
-  return indices.slice(0, count).sort((a, b) => a - b);
+  return Array.from(options).sort(() => Math.random() - 0.5);
 }
 
 /* ------------------------------------------------------------------ */
@@ -61,12 +59,10 @@ function RulesDropdown() {
           <div className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
             <p className="mb-1 text-sm font-semibold text-zinc-900 dark:text-zinc-50">How to play</p>
             <ul className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
-              <li>• A word is shown with missing letters replaced by blanks.</li>
-              <li>• Click a blank or use <strong>← →</strong> arrow keys to select it.</li>
-              <li>• Type the correct letter — it auto-advances to the next blank.</li>
-              <li>• Press <strong>Backspace</strong> to clear a blank or go back.</li>
-              <li>• Once all blanks are filled, the answer is checked automatically.</li>
+              <li>• A word from your list is shown with one letter missing.</li>
+              <li>• Pick the correct letter from the four options below.</li>
               <li>• Build a streak by getting answers right in a row!</li>
+              <li>• Complete all words to win.</li>
             </ul>
           </div>
         </>
@@ -131,66 +127,16 @@ function CongratsModal({
   );
 }
 
-type BlankState = "empty" | "filled" | "correct" | "wrong";
-
-function LetterCell({
-  char,
-  isBlank,
-  isActive,
-  blankState,
-  answer,
-  onClick,
-}: {
-  char: string;
-  isBlank: boolean;
-  isActive: boolean;
-  blankState: BlankState;
-  answer: string;
-  onClick?: () => void;
-}) {
-  if (!isBlank) {
-    return (
-      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 text-xl font-bold uppercase text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100 sm:h-14 sm:w-14 sm:text-2xl">
-        {char}
-      </div>
-    );
-  }
-
-  let cellClasses =
-    "flex h-12 w-12 items-center justify-center rounded-lg border-2 text-xl font-bold uppercase transition-all duration-150 cursor-pointer sm:h-14 sm:w-14 sm:text-2xl";
-
-  if (blankState === "correct") {
-    cellClasses += " border-green-500 bg-green-50 text-green-700 dark:border-green-400 dark:bg-green-950 dark:text-green-300";
-  } else if (blankState === "wrong") {
-    cellClasses += " border-red-500 bg-red-50 text-red-700 animate-shake dark:border-red-400 dark:bg-red-950 dark:text-red-300";
-  } else if (isActive) {
-    cellClasses += " border-blue-500 bg-blue-50 text-zinc-900 ring-2 ring-blue-500/30 dark:border-blue-400 dark:bg-blue-950 dark:text-zinc-50 dark:ring-blue-400/30";
-  } else if (answer) {
-    cellClasses += " border-zinc-400 bg-white text-zinc-900 dark:border-zinc-500 dark:bg-zinc-900 dark:text-zinc-50";
-  } else {
-    cellClasses += " border-dashed border-zinc-300 bg-white text-zinc-400 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-500";
-  }
-
-  return (
-    <div className={cellClasses} onClick={onClick} role="button" tabIndex={-1}>
-      {answer ? answer : isActive ? <span className="animate-pulse text-blue-400 dark:text-blue-300">|</span> : ""}
-    </div>
-  );
-}
-
 function MissingLetterGame({
   words,
   bankKey,
-  grade,
   onGoHome,
 }: {
   words: string[];
   bankKey: string;
-  grade: string | null;
   onGoHome: () => void;
 }) {
   const [gameId, setGameId] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const gameWords = useMemo(
     () => pickRandomWords(words, 10),
@@ -203,31 +149,25 @@ function MissingLetterGame({
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [feedback, setFeedback] = useState<"idle" | "correct" | "wrong">("idle");
+  const [showFullWord, setShowFullWord] = useState(false);
   const [showCongrats, setShowCongrats] = useState(false);
 
   const currentWord = gameWords[index] ?? null;
-
-  const blankIndices = useMemo(() => {
-    if (!currentWord) return [];
-    const count = getMissingCount(currentWord, grade);
-    return pickBlankIndices(currentWord, count);
-  }, [currentWord, grade]);
-
-  const [answers, setAnswers] = useState<string[]>([]);
-  const [activeBlank, setActiveBlank] = useState(0);
-  const [blankStates, setBlankStates] = useState<BlankState[]>([]);
-
-  useEffect(() => {
-    setAnswers(new Array(blankIndices.length).fill(""));
-    setActiveBlank(0);
-    setBlankStates(new Array(blankIndices.length).fill("empty"));
-  }, [blankIndices.length, currentWord]);
-
-  useEffect(() => {
-    containerRef.current?.focus();
-  }, []);
-
+  // Use score for the bar: it matches "correct answers so far" and stays at N after the
+  // last word (index is not incremented when the game ends). The old index/feedback
+  // formula dropped to 90% after the final answer because feedback reset to idle while
+  // index stayed on the last word.
   const progress = gameWords.length > 0 ? (score / gameWords.length) * 100 : 0;
+
+  const letterData = useMemo(() => {
+    if (!currentWord) return null;
+    return removeRandomLetter(currentWord);
+  }, [currentWord]);
+
+  const options = useMemo(() => {
+    if (!letterData) return [];
+    return generateOptions(letterData.missing);
+  }, [letterData]);
 
   useEffect(() => {
     if (showCongrats && bankKey) {
@@ -235,156 +175,64 @@ function MissingLetterGame({
     }
   }, [showCongrats, bankKey]);
 
-  const advanceWord = useCallback(() => {
-    const nextIdx = index + 1;
-    if (nextIdx >= gameWords.length) {
-      setShowCongrats(true);
-    } else {
-      setIndex(nextIdx);
-    }
-    setFeedback("idle");
-  }, [index, gameWords.length]);
-
-  const checkAnswers = useCallback(
-    (currentAnswers: string[]) => {
-      if (!currentWord || feedback !== "idle") return;
-      const states: BlankState[] = currentAnswers.map((a, i) =>
-        a.toLowerCase() === currentWord[blankIndices[i]].toLowerCase() ? "correct" : "wrong",
-      );
-      setBlankStates(states);
-
-      const allCorrect = states.every((s) => s === "correct");
-      if (allCorrect) {
-        const newStreak = streak + 1;
-        setStreak(newStreak);
-        setBestStreak((prev) => Math.max(prev, newStreak));
-        setScore((s) => s + 1);
-        setFeedback("correct");
-        setTimeout(() => advanceWord(), 900);
-      } else {
-        setStreak(0);
-        setFeedback("wrong");
-        setTimeout(() => {
-          const newAnswers = currentAnswers.map((a, i) => (states[i] === "correct" ? a : ""));
-          setAnswers(newAnswers);
-          setBlankStates(states.map((s) => (s === "correct" ? "correct" : "empty")));
-          setFeedback("idle");
-          const firstWrong = states.findIndex((s) => s === "wrong");
-          if (firstWrong !== -1) setActiveBlank(firstWrong);
-        }, 800);
-      }
-    },
-    [currentWord, blankIndices, feedback, streak, advanceWord],
-  );
-
-  const handleLetterInput = useCallback(
-    (letter: string) => {
-      if (feedback !== "idle" || !currentWord) return;
-
-      const newAnswers = [...answers];
-      newAnswers[activeBlank] = letter;
-      setAnswers(newAnswers);
-      setBlankStates((prev) => {
-        const next = [...prev];
-        next[activeBlank] = "filled";
-        return next;
-      });
-
-      const allFilled = newAnswers.every((a) => a !== "");
-      if (allFilled) {
-        checkAnswers(newAnswers);
-        return;
-      }
-
-      let nextBlank = -1;
-      for (let i = activeBlank + 1; i < blankIndices.length; i++) {
-        if (!newAnswers[i]) { nextBlank = i; break; }
-      }
-      if (nextBlank === -1) {
-        for (let i = 0; i < activeBlank; i++) {
-          if (!newAnswers[i]) { nextBlank = i; break; }
-        }
-      }
-      if (nextBlank !== -1) setActiveBlank(nextBlank);
-    },
-    [answers, activeBlank, blankIndices.length, feedback, currentWord, checkAnswers],
-  );
-
-  const handleBackspace = useCallback(() => {
-    if (feedback !== "idle") return;
-    if (answers[activeBlank]) {
-      const newAnswers = [...answers];
-      newAnswers[activeBlank] = "";
-      setAnswers(newAnswers);
-      setBlankStates((prev) => {
-        const next = [...prev];
-        next[activeBlank] = "empty";
-        return next;
-      });
-    } else if (activeBlank > 0) {
-      const prevBlank = activeBlank - 1;
-      setActiveBlank(prevBlank);
-      if (answers[prevBlank]) {
-        const newAnswers = [...answers];
-        newAnswers[prevBlank] = "";
-        setAnswers(newAnswers);
-        setBlankStates((prev) => {
-          const next = [...prev];
-          next[prevBlank] = "empty";
-          return next;
-        });
-      }
-    }
-  }, [answers, activeBlank, feedback]);
-
   useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (showCongrats) return;
-
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        setActiveBlank((prev) => Math.max(0, prev - 1));
-        return;
-      }
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        setActiveBlank((prev) => Math.min(blankIndices.length - 1, prev + 1));
-        return;
-      }
-      if (e.key === "Backspace") {
-        e.preventDefault();
-        handleBackspace();
-        return;
-      }
-      if (e.key.length === 1 && /[a-z]/i.test(e.key)) {
-        e.preventDefault();
-        handleLetterInput(e.key.toLowerCase());
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [blankIndices.length, showCongrats, handleLetterInput, handleBackspace]);
-
-  const handlePlayAgain = () => {
-    setGameId((id) => id + 1);
     setIndex(0);
     setScore(0);
     setStreak(0);
     setBestStreak(0);
     setFeedback("idle");
+    setShowFullWord(false);
     setShowCongrats(false);
+  }, [gameId]);
+
+  const handleGuess = useCallback((letter: string) => {
+    if (!letterData || feedback !== "idle") return;
+
+    if (letter === letterData.missing) {
+      const newStreak = streak + 1;
+      setStreak(newStreak);
+      setBestStreak((prev) => Math.max(prev, newStreak));
+      setFeedback("correct");
+      setShowFullWord(true);
+      setScore((s) => s + 1);
+
+      setTimeout(() => {
+        setFeedback("idle");
+        setShowFullWord(false);
+        const nextIdx = index + 1;
+        if (nextIdx >= gameWords.length) {
+          setShowCongrats(true);
+        } else {
+          setIndex(nextIdx);
+        }
+      }, 1000);
+    } else {
+      setStreak(0);
+      setFeedback("wrong");
+      setTimeout(() => setFeedback("idle"), 500);
+    }
+  }, [letterData, feedback, streak, index, gameWords.length]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (feedback !== "idle" || showCongrats) return;
+      const key = e.key.toLowerCase();
+      if (key.length !== 1 || !/[a-z]/.test(key)) return;
+      if (options.includes(key)) {
+        e.preventDefault();
+        handleGuess(key);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [options, feedback, showCongrats, handleGuess]);
+
+  const handlePlayAgain = () => {
+    setGameId((id) => id + 1);
   };
 
   return (
     <>
-      {/* Flame bounce keyframe injected once */}
-      <style>{`
-        @keyframes flameBounce {
-          from { transform: translateY(0) scale(1); }
-          to   { transform: translateY(-3px) scale(1.15); }
-        }
-      `}</style>
-
       {showCongrats && (
         <CongratsModal
           score={score}
@@ -395,23 +243,19 @@ function MissingLetterGame({
         />
       )}
 
-      <div ref={containerRef} className="flex w-full flex-1 flex-col items-center gap-6 outline-none" tabIndex={0}>
+      <div className="flex w-full flex-1 flex-col items-center gap-6">
         <div className="w-full max-w-md">
           <div className="mb-1 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
             <span>Word {Math.min(index + 1, gameWords.length)} of {gameWords.length}</span>
             <div className="flex items-center gap-3">
               {streak >= 2 && (
-                <span className="flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-600 dark:bg-orange-900/40 dark:text-orange-400">
-                  <span
-                    style={{
-                      display: "inline-block",
-                      animation: "flameBounce 0.6s ease-in-out infinite alternate",
-                    }}
-                  >
-                    🔥
-                  </span>
-                  {streak} streak
-                </span>
+                
+<span className="flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-600 dark:bg-orange-900/40 dark:text-orange-400">
+  <style>{`@keyframes flameBounce { from { transform: translateY(0) scale(1); } to { transform: translateY(-3px) scale(1.15); } }`}</style>
+  <span style={{ display: "inline-block", animation: "flameBounce 0.6s ease-in-out infinite alternate" }}>🔥</span>
+  {streak} streak
+</span>
+
               )}
               <span>{score} correct</span>
             </div>
@@ -424,24 +268,32 @@ function MissingLetterGame({
           </div>
         </div>
 
-        {currentWord && (
+        {currentWord && letterData && (
           <div className="flex flex-1 flex-col items-center justify-center gap-8">
-            <div className="flex flex-wrap justify-center gap-2">
-              {currentWord.split("").map((char, charIdx) => {
-                const blankIdx = blankIndices.indexOf(charIdx);
-                const isBlank = blankIdx !== -1;
-                return (
-                  <LetterCell
-                    key={charIdx}
-                    char={char}
-                    isBlank={isBlank}
-                    isActive={isBlank && blankIdx === activeBlank && feedback === "idle"}
-                    blankState={isBlank ? blankStates[blankIdx] ?? "empty" : "empty"}
-                    answer={isBlank ? answers[blankIdx] ?? "" : ""}
-                    onClick={isBlank ? () => { if (feedback === "idle") setActiveBlank(blankIdx); } : undefined}
-                  />
-                );
-              })}
+            <div
+              className={`text-4xl font-bold tracking-widest transition-colors duration-300 ${
+                feedback === "correct"
+                  ? "text-green-500"
+                  : feedback === "wrong"
+                    ? "text-red-500 animate-shake"
+                    : "text-zinc-900 dark:text-zinc-50"
+              }`}
+            >
+              {showFullWord ? currentWord.toUpperCase() : letterData.display.toUpperCase()}
+            </div>
+
+            <div className="flex gap-3">
+              {options.map((letter) => (
+                <button
+                  key={letter}
+                  type="button"
+                  onClick={() => handleGuess(letter)}
+                  disabled={feedback !== "idle"}
+                  className="flex h-14 w-14 cursor-pointer items-center justify-center rounded-xl border-2 border-zinc-300 bg-white text-xl font-bold uppercase text-zinc-900 shadow-sm transition-all duration-150 hover:border-zinc-500 hover:shadow-md active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:border-zinc-400"
+                >
+                  {letter.toUpperCase()}
+                </button>
+              ))}
             </div>
 
             <p className="h-6 text-sm font-medium">
@@ -449,17 +301,7 @@ function MissingLetterGame({
                 <span className="text-green-500">Correct!</span>
               )}
               {feedback === "wrong" && (
-                <span className="text-red-500">Not quite — try the highlighted ones again</span>
-              )}
-              {feedback === "idle" && blankIndices.length > 1 && (
-                <span className="text-zinc-400 dark:text-zinc-500">
-                  Type letters to fill the blanks · ← → to navigate
-                </span>
-              )}
-              {feedback === "idle" && blankIndices.length === 1 && (
-                <span className="text-zinc-400 dark:text-zinc-500">
-                  Type the missing letter
-                </span>
+                <span className="text-red-500">Try again</span>
               )}
             </p>
           </div>
@@ -470,7 +312,7 @@ function MissingLetterGame({
 }
 
 export default function MissingLetterPage() {
-  const { words, grade } = useGameWords();
+  const { words } = useGameWords();
   const router = useRouter();
 
   const bankKey = useMemo(
@@ -516,7 +358,6 @@ export default function MissingLetterPage() {
           key={bankKey}
           words={words}
           bankKey={bankKey}
-          grade={grade}
           onGoHome={() => router.push("/home")}
         />
       </main>
