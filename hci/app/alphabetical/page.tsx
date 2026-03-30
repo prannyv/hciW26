@@ -387,7 +387,7 @@ function AlphabeticalPlay({
               aria-label="Word tiles. Arrow keys move selection. Space to pick up or drop a tile. Drag tiles to reorder."
               onKeyDown={handleGridKeyDown}
             >
-              <div className="grid flex-1 grid-cols-4 gap-3" style={{ gridAutoRows: "1fr" }}>
+              <div className="mx-auto grid w-full max-w-3xl flex-1 grid-cols-4 gap-3" style={{ gridAutoRows: "clamp(80px, 14vh, 130px)" }}>
                 {items.map((item, i) => (
                   <SortableWordBox
                     key={item.id}
