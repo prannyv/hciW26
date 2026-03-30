@@ -36,19 +36,37 @@ function pickBlankIndices(word: string, count: number): number[] {
   return indices.slice(0, count).sort((a, b) => a - b);
 }
 
+function generateOptions(correct: string): string[] {
+  const alphabet = "abcdefghijklmnopqrstuvwxyz";
+  const options = new Set<string>();
+  options.add(correct.toLowerCase());
+  while (options.size < 4) {
+    options.add(alphabet[Math.floor(Math.random() * 26)]);
+  }
+  return Array.from(options).sort(() => Math.random() - 0.5);
+}
+
 /* ------------------------------------------------------------------ */
 /*  Components                                                         */
 /* ------------------------------------------------------------------ */
 
 function RulesDropdown() {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
 
   return (
-    <div ref={ref} className="relative">
+    <div
+      className="relative"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocusCapture={() => setOpen(true)}
+      onBlurCapture={(e) => {
+        const next = e.relatedTarget as Node | null;
+        if (!e.currentTarget.contains(next)) setOpen(false);
+      }}
+    >
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onFocus={() => setOpen(true)}
         aria-expanded={open}
         aria-label="How to play"
         className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-zinc-300 bg-white text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800"
@@ -56,20 +74,18 @@ function RulesDropdown() {
         ?
       </button>
       {open && (
-        <>
-          <div className="fixed inset-0 z-10" aria-hidden onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-            <p className="mb-1 text-sm font-semibold text-zinc-900 dark:text-zinc-50">How to play</p>
-            <ul className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
-              <li>• A word is shown with missing letters replaced by blanks.</li>
-              <li>• Click a blank or use <strong>← →</strong> arrow keys to select it.</li>
-              <li>• Type the correct letter — it auto-advances to the next blank.</li>
-              <li>• Press <strong>Backspace</strong> to clear a blank or go back.</li>
-              <li>• Once all blanks are filled, the answer is checked automatically.</li>
-              <li>• Build a streak by getting answers right in a row!</li>
-            </ul>
-          </div>
-        </>
+        <div className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+          <p className="mb-1 text-sm font-semibold text-zinc-900 dark:text-zinc-50">How to play</p>
+          <ul className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+            <li>• A word is shown with missing letters replaced by blanks.</li>
+            <li>• Click a blank or use <strong>← →</strong> arrow keys to select it.</li>
+            <li>• Pick from the letter choices below, or type directly.</li>
+            <li>• Filling a blank auto-advances to the next one.</li>
+            <li>• Press <strong>Backspace</strong> to clear a blank or go back.</li>
+            <li>• Once all blanks are filled, the answer is checked automatically.</li>
+            <li>• Build a streak by getting answers right in a row!</li>
+          </ul>
+        </div>
       )}
     </div>
   );
@@ -212,6 +228,12 @@ function MissingLetterGame({
     const count = getMissingCount(currentWord, grade);
     return pickBlankIndices(currentWord, count);
   }, [currentWord, grade]);
+
+  const blankOptions = useMemo(
+    () => blankIndices.map((charIdx) => generateOptions(currentWord?.[charIdx] ?? "a")),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [blankIndices, currentWord],
+  );
 
   const [answers, setAnswers] = useState<string[]>([]);
   const [activeBlank, setActiveBlank] = useState(0);
@@ -357,13 +379,17 @@ function MissingLetterGame({
         return;
       }
       if (e.key.length === 1 && /[a-z]/i.test(e.key)) {
-        e.preventDefault();
-        handleLetterInput(e.key.toLowerCase());
+        const key = e.key.toLowerCase();
+        const activeOptions = blankOptions[activeBlank];
+        if (activeOptions?.includes(key)) {
+          e.preventDefault();
+          handleLetterInput(key);
+        }
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [blankIndices.length, showCongrats, handleLetterInput, handleBackspace]);
+  }, [blankIndices.length, blankOptions, activeBlank, showCongrats, handleLetterInput, handleBackspace]);
 
   const handlePlayAgain = () => {
     setGameId((id) => id + 1);
@@ -428,6 +454,21 @@ function MissingLetterGame({
               })}
             </div>
 
+            {feedback === "idle" && blankOptions[activeBlank] && (
+              <div className="flex gap-3">
+                {blankOptions[activeBlank].map((letter) => (
+                  <button
+                    key={letter}
+                    type="button"
+                    onClick={() => handleLetterInput(letter)}
+                    className="flex h-14 w-14 cursor-pointer items-center justify-center rounded-xl border-2 border-zinc-300 bg-white text-xl font-bold uppercase text-zinc-900 shadow-sm transition-all duration-150 hover:border-zinc-500 hover:shadow-md active:scale-95 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:border-zinc-400"
+                  >
+                    {letter.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <p className="h-6 text-sm font-medium">
               {feedback === "correct" && (
                 <span className="text-green-500">Correct!</span>
@@ -437,12 +478,12 @@ function MissingLetterGame({
               )}
               {feedback === "idle" && blankIndices.length > 1 && (
                 <span className="text-zinc-400 dark:text-zinc-500">
-                  Type letters to fill the blanks · ← → to navigate
+                  Pick a letter or type · ← → to switch blanks
                 </span>
               )}
               {feedback === "idle" && blankIndices.length === 1 && (
                 <span className="text-zinc-400 dark:text-zinc-500">
-                  Type the missing letter
+                  Pick or type the missing letter
                 </span>
               )}
             </p>

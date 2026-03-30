@@ -12,11 +12,16 @@ function nonEmptyWordCount(words: string[]): number {
 }
 
 export default function SetupCustomPage() {
-  const { words, setWords } = useGameWords();
+  const { words, setWords, setGrade, setTopic } = useGameWords();
   const router = useRouter();
   const [minWordsMessage, setMinWordsMessage] = useState<string | null>(null);
 
   const filledCount = nonEmptyWordCount(words);
+
+  useEffect(() => {
+    setGrade(null);
+    setTopic(null);
+  }, [setGrade, setTopic]);
 
   useEffect(() => {
     if (filledCount >= MIN_WORDS) setMinWordsMessage(null);
@@ -46,7 +51,7 @@ export default function SetupCustomPage() {
         </Link>
       </div>
       <h1 className="text-center text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-        Spelling Central
+        Spelling Central 2
       </h1>
 
       <main className="mx-auto mt-10 w-full max-w-5xl">
@@ -60,7 +65,7 @@ export default function SetupCustomPage() {
                 next[i] = e.target.value;
                 setWords(next);
               }}
-              className="h-11 w-56 rounded-md border border-zinc-300 bg-white px-3 text-zinc-900 outline-none ring-offset-2 focus:ring-2 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:ring-zinc-600"
+              className="h-11 w-56 rounded-md border border-zinc-300 bg-white px-3 text-zinc-900 outline-none hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800"
             />
           ))}
 

@@ -10,6 +10,18 @@ import {
 } from "../gameCompletions";
 import { useGameWords } from "../gameWords";
 
+const DIFFICULTY_LABEL: Record<string, string> = {
+  "1": "Beginner",
+  "2": "Intermediate",
+  "3": "Advanced",
+};
+
+const TOPIC_LABEL: Record<string, string> = {
+  animals: "Animals",
+  science: "Science",
+  food: "Food",
+};
+
 function GameCard({
   href,
   label,
@@ -47,6 +59,11 @@ function GameCard({
 }
 
 export default function HomePage() {
+  const { grade, topic } = useGameWords();
+
+  const wordListDisplay =
+    topic != null ? TOPIC_LABEL[topic] ?? topic : "Custom";
+
   return (
     <div className="flex min-h-full flex-1 flex-col bg-zinc-50 px-6 py-12 dark:bg-zinc-950">
       <div className="mx-auto w-full max-w-5xl shrink-0">
@@ -56,6 +73,29 @@ export default function HomePage() {
         >
           ← Back to word list
         </Link>
+        <header className="mt-8 text-center">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Spelling Central 2
+          </h1>
+          <dl className="mx-auto mt-6 flex max-w-md flex-col gap-2 text-sm text-zinc-600 dark:text-zinc-400 sm:flex-row sm:justify-center sm:gap-8">
+            {grade != null ? (
+              <div className="flex justify-center gap-2 sm:justify-start">
+                <dt className="font-medium text-zinc-500 dark:text-zinc-500">
+                  Difficulty
+                </dt>
+                <dd className="text-zinc-900 dark:text-zinc-100">
+                  {DIFFICULTY_LABEL[grade] ?? grade}
+                </dd>
+              </div>
+            ) : null}
+            <div className="flex justify-center gap-2 sm:justify-start">
+              <dt className="font-medium text-zinc-500 dark:text-zinc-500">
+                Word list
+              </dt>
+              <dd className="text-zinc-900 dark:text-zinc-100">{wordListDisplay}</dd>
+            </div>
+          </dl>
+        </header>
       </div>
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center">
         <div className="flex flex-wrap justify-center gap-6">

@@ -141,13 +141,21 @@ function SortableWordBox({
 
 function RulesDropdown() {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
 
   return (
-    <div ref={ref} className="relative">
+    <div
+      className="relative"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocusCapture={() => setOpen(true)}
+      onBlurCapture={(e) => {
+        const next = e.relatedTarget as Node | null;
+        if (!e.currentTarget.contains(next)) setOpen(false);
+      }}
+    >
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onFocus={() => setOpen(true)}
         aria-expanded={open}
         aria-label="How to play"
         className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-300 bg-white text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800"
@@ -156,31 +164,23 @@ function RulesDropdown() {
       </button>
 
       {open && (
-        <>
-          {/* backdrop to close on outside click */}
-          <div
-            className="fixed inset-0 z-10"
-            aria-hidden
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-            <p className="mb-1 text-sm font-semibold text-zinc-900 dark:text-zinc-50">How to play</p>
-            <ul className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
-              <li>• Words from your list are shown in a random order.</li>
-              <li>• Drag and drop the boxes to arrange them in alphabetical order.</li>
-              <li>
-                • <strong>Keyboard:</strong> tab to the tile grid to focus it. Use{" "}
-                <strong>arrow keys</strong> to move the blue selection ring between tiles.
-                Press <strong>Space</strong> to pick up the selected tile (turns amber) —
-                then arrow keys <strong>move</strong> it. Press <strong>Space</strong> again to drop.
-                <strong>Escape</strong> cancels.
-              </li>
-              <li>• When you&apos;re ready, press <strong>Check Answers</strong>.</li>
-              <li>• Green = correct position · Red = incorrect position.</li>
-              <li>• Moving a box resets all colours so you can try again.</li>
-            </ul>
-          </div>
-        </>
+        <div className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+          <p className="mb-1 text-sm font-semibold text-zinc-900 dark:text-zinc-50">How to play</p>
+          <ul className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+            <li>• Words from your list are shown in a random order.</li>
+            <li>• Drag and drop the boxes to arrange them in alphabetical order.</li>
+            <li>
+              • <strong>Keyboard:</strong> tab to the tile grid to focus it. Use{" "}
+              <strong>arrow keys</strong> to move the blue selection ring between tiles.
+              Press <strong>Space</strong> to pick up the selected tile (turns amber) —
+              then arrow keys <strong>move</strong> it. Press <strong>Space</strong> again to drop.
+              <strong>Escape</strong> cancels.
+            </li>
+            <li>• When you&apos;re ready, press <strong>Check Answers</strong>.</li>
+            <li>• Green = correct position · Red = incorrect position.</li>
+            <li>• Moving a box resets all colours so you can try again.</li>
+          </ul>
+        </div>
       )}
     </div>
   );
@@ -359,8 +359,6 @@ function AlphabeticalPlay({
     setItems(wordsToItems(pickRandomWords(words, 20)));
   }, [words]);
 
-  const bankWordCount = words.filter((w) => w.trim()).length;
-
   return (
     <>
       {showCongrats && (
@@ -374,12 +372,6 @@ function AlphabeticalPlay({
           if (!tag) { e.preventDefault(); gridRef.current?.focus(); }
         }}
       >
-        {items.length < 20 && bankWordCount < 20 && (
-          <p className="mb-4 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            Add more words in setup to always get 20 here.
-          </p>
-        )}
-
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}

@@ -52,30 +52,38 @@ function RulesDropdown() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="relative">
+    <div
+      className="relative"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocusCapture={() => setOpen(true)}
+      onBlurCapture={(e) => {
+        const next = e.relatedTarget as Node | null;
+        if (!e.currentTarget.contains(next)) setOpen(false);
+      }}
+    >
       <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-300 bg-white text-sm font-semibold text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400"
+        type="button"
+        onFocus={() => setOpen(true)}
+        aria-expanded={open}
+        aria-label="How to play"
+        className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-zinc-300 bg-white text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800"
       >
         ?
       </button>
 
       {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-
-          <div className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-            <p className="mb-2 text-sm font-semibold">How to play</p>
-            <ul className="text-xs text-zinc-600 dark:text-zinc-400 space-y-1">
-              <li>• Tap or type letters to form a word.</li>
-              <li>• Use all letters to complete the word.</li>
-              <li>• Press Submit or Enter.</li>
-              <li>• Green = correct</li>
-              <li>• Yellow = real word (1 retry)</li>
-              <li>• Red = incorrect</li>
-            </ul>
-          </div>
-        </>
+        <div className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+          <p className="mb-1 text-sm font-semibold text-zinc-900 dark:text-zinc-50">How to play</p>
+          <ul className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+            <li>• Tap or type letters to form a word.</li>
+            <li>• Use all letters to complete the word.</li>
+            <li>• Press Submit or Enter.</li>
+            <li>• Green = correct</li>
+            <li>• Yellow = real word (1 retry)</li>
+            <li>• Red = incorrect</li>
+          </ul>
+        </div>
       )}
     </div>
   );
@@ -83,23 +91,53 @@ function RulesDropdown() {
 
 /* ---------------- Modal ---------------- */
 
-function CongratsModal({ score, total, onPlayAgain, onGoHome }: any) {
+function CongratsModal({
+  score,
+  total,
+  bestStreak,
+  onPlayAgain,
+  onGoHome,
+}: {
+  score: number;
+  total: number;
+  bestStreak: number;
+  onPlayAgain: () => void;
+  onGoHome: () => void;
+}) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="congrats-title"
+    >
       <div className="w-full max-w-sm rounded-2xl bg-white px-8 py-10 text-center shadow-2xl dark:bg-zinc-900">
-        <h2 className="mb-2 text-2xl font-bold">Well Done!</h2>
-        <p className="mb-6">You scored {score} / {total}</p>
-
-        <div className="flex flex-col gap-3">
+        <h2
+          id="congrats-title"
+          className="mb-2 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
+        >
+          Well Done!
+        </h2>
+        <p className="mb-1 text-base text-zinc-600 dark:text-zinc-400">
+          You scored {score} out of {total}!
+        </p>
+        {bestStreak >= 2 && (
+          <p className="mb-6 text-sm text-zinc-500 dark:text-zinc-500">
+            Best streak: {bestStreak} in a row
+          </p>
+        )}
+        <div className={`flex flex-col gap-3 sm:flex-row sm:justify-center ${bestStreak < 2 ? "mt-8" : ""}`}>
           <button
+            type="button"
             onClick={onPlayAgain}
-            className="rounded-full bg-zinc-900 px-6 py-3 text-white dark:bg-zinc-100 dark:text-zinc-900"
+            className="inline-flex cursor-pointer items-center justify-center rounded-full bg-zinc-900 px-7 py-3 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
           >
             Play Again
           </button>
           <button
+            type="button"
             onClick={onGoHome}
-            className="rounded-full border px-6 py-3"
+            className="inline-flex cursor-pointer items-center justify-center rounded-full border border-zinc-300 bg-white px-7 py-3 text-sm font-semibold text-zinc-900 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-800"
           >
             Game List
           </button>
@@ -126,6 +164,8 @@ function AnagramGame({
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [selected, setSelected] = useState<Tile[]>([]);
   const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
 
   const [status, setStatus] = useState<"idle" | "correct" | "almost" | "wrong">("idle");
   const [message, setMessage] = useState("");
@@ -160,6 +200,9 @@ function AnagramGame({
     const attempt = selected.map((t) => t.letter).join("").toLowerCase();
 
     if (attempt === currentWord.toLowerCase()) {
+      const newStreak = streak + 1;
+      setStreak(newStreak);
+      setBestStreak((prev) => Math.max(prev, newStreak));
       setStatus("correct");
       setScore((s) => s + 1);
 
@@ -186,6 +229,7 @@ function AnagramGame({
         setMessage("");
       }, 1200);
     } else {
+      setStreak(0);
       setStatus("wrong");
       setMessage(`Incorrect — the correct word was: ${currentWord.toUpperCase()}`);
 
@@ -204,7 +248,7 @@ function AnagramGame({
         next >= gameWords.length ? setShowCongrats(true) : setIndex(next);
       }, 1500);
     }
-  }, [selected, currentWord, retryUsed, index, gameWords.length, status]);
+  }, [selected, currentWord, retryUsed, index, gameWords.length, status, streak]);
 
   const handleTileClick = (tile: Tile) => {
     if (status !== "idle") return;
@@ -237,6 +281,8 @@ function AnagramGame({
   const handlePlayAgain = () => {
     setIndex(0);
     setScore(0);
+    setStreak(0);
+    setBestStreak(0);
     setShowCongrats(false);
   };
 
@@ -246,37 +292,51 @@ function AnagramGame({
         <CongratsModal
           score={score}
           total={gameWords.length}
+          bestStreak={bestStreak}
           onPlayAgain={handlePlayAgain}
           onGoHome={onGoHome}
         />
       )}
 
       {!showCongrats && currentWord && (
-        <div className="flex w-full flex-col items-center gap-6">
+        <div className="flex w-full flex-1 flex-col items-center gap-8">
+          <div className="w-full max-w-md">
+            <div className="mb-1 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+              <span>Word {index + 1} of {gameWords.length}</span>
+              <div className="flex items-center gap-3">
+                {streak >= 2 && (
+                  <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-600 dark:bg-orange-900/40 dark:text-orange-400">
+                    {streak} streak
+                  </span>
+                )}
+                <span>{score} correct</span>
+              </div>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+              <div
+                className="h-full rounded-full bg-zinc-900 transition-all duration-500 dark:bg-zinc-100"
+                style={{ width: `${(score / gameWords.length) * 100}%` }}
+              />
+            </div>
+          </div>
 
-          <p className="text-sm text-zinc-400">
-            Word {index + 1} of {gameWords.length}
-          </p>
-
-          {/* SLOT CONTAINER */}
           <div
-            className={`rounded-2xl border border-zinc-300 bg-white p-4 transition
-            dark:border-zinc-700 dark:bg-zinc-900
-            ${shake ? "animate-shake" : ""}`}
+            className={`rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition dark:border-zinc-700 dark:bg-zinc-900 ${shake ? "animate-shake" : ""}`}
           >
-            <div className="flex gap-3">
+            <div className="flex gap-2.5">
               {Array.from({ length: currentWord.length }).map((_, i) => (
                 <div
                   key={i}
-                  className={`w-12 h-12 flex items-center justify-center rounded-xl text-xl font-bold border-2
-                  ${
+                  className={`flex h-12 w-12 items-center justify-center rounded-lg border-2 text-xl font-bold uppercase transition-colors duration-150 sm:h-14 sm:w-14 sm:text-2xl ${
                     status === "correct"
-                      ? "bg-green-500 text-white"
+                      ? "border-green-500 bg-green-50 text-green-700 dark:border-green-400 dark:bg-green-950 dark:text-green-300"
                       : status === "almost"
-                      ? "bg-yellow-400 text-black"
+                      ? "border-yellow-500 bg-yellow-50 text-yellow-700 dark:border-yellow-400 dark:bg-yellow-950 dark:text-yellow-300"
                       : status === "wrong"
-                      ? "bg-red-500 text-white"
-                      : "bg-white text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
+                      ? "border-red-500 bg-red-50 text-red-700 dark:border-red-400 dark:bg-red-950 dark:text-red-300"
+                      : selected[i]
+                      ? "border-zinc-400 bg-white text-zinc-900 dark:border-zinc-500 dark:bg-zinc-900 dark:text-zinc-50"
+                      : "border-dashed border-zinc-300 bg-white text-zinc-400 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-500"
                   }`}
                 >
                   {selected[i]?.letter ?? ""}
@@ -286,26 +346,24 @@ function AnagramGame({
           </div>
 
           {message && (
-            <p className={`text-sm font-semibold ${status === "wrong" ? "text-red-400" : "text-yellow-400"}`}>
+            <p className={`text-sm font-medium ${status === "wrong" ? "text-red-500" : "text-yellow-500 dark:text-yellow-400"}`}>
               {message}
             </p>
           )}
 
-          {/* Tiles */}
-          <div className="flex flex-wrap gap-3 justify-center">
+          <div className="flex flex-wrap justify-center gap-3">
             {tiles.map((tile) => {
               const used = selectedIds.has(tile.id);
-
               return (
                 <button
                   key={tile.id}
+                  type="button"
                   disabled={used}
                   onClick={() => handleTileClick(tile)}
-                  className={`w-14 h-14 rounded-xl border-2 text-xl font-bold transition
-                  ${
+                  className={`flex h-14 w-14 cursor-pointer items-center justify-center rounded-xl border-2 text-xl font-bold uppercase shadow-sm transition-all duration-150 ${
                     used
-                      ? "opacity-30"
-                      : "bg-white text-zinc-900 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-700"
+                      ? "border-transparent bg-zinc-100 text-zinc-300 opacity-40 dark:bg-zinc-800 dark:text-zinc-600"
+                      : "border-zinc-300 bg-white text-zinc-900 hover:border-zinc-500 hover:shadow-md active:scale-95 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:border-zinc-400"
                   }`}
                 >
                   {tile.letter}
@@ -314,19 +372,29 @@ function AnagramGame({
             })}
           </div>
 
-          {/* Controls */}
-          <div className="flex gap-4">
-            <button onClick={handleUndo} className="rounded-full border px-5 py-2">Undo</button>
-            <button onClick={handleClear} className="rounded-full border px-5 py-2">Clear</button>
-
+          <div className="flex gap-3">
             <button
+              type="button"
+              onClick={handleUndo}
+              className="inline-flex items-center justify-center rounded-full border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              Undo
+            </button>
+            <button
+              type="button"
+              onClick={handleClear}
+              className="inline-flex items-center justify-center rounded-full border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
               onClick={handleSubmit}
               disabled={selected.length !== currentWord.length}
-              className={`px-5 py-2 rounded-full border transition
-              ${
+              className={`inline-flex items-center justify-center rounded-full px-6 py-2.5 text-sm font-semibold transition-colors ${
                 selected.length !== currentWord.length
-                  ? "opacity-40 cursor-not-allowed bg-zinc-200 text-zinc-400"
-                  : "bg-blue-500 text-white"
+                  ? "cursor-not-allowed bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600"
+                  : "cursor-pointer bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
               }`}
             >
               Submit
@@ -351,13 +419,13 @@ export default function AnagramsPage() {
 
   if (!bankKey) {
     return (
-      <div className="flex min-h-full flex-1 flex-col items-center justify-center gap-6 bg-white px-6 dark:bg-zinc-950">
+      <div className="flex min-h-full flex-1 flex-col items-center justify-center gap-6 bg-zinc-50 px-6 dark:bg-zinc-950">
         <p className="text-center text-zinc-600 dark:text-zinc-400">
           No words in your list yet. Set up your word bank first.
         </p>
         <Link
           href="/setup/select"
-          className="inline-flex min-w-[140px] items-center justify-center rounded-full bg-zinc-900 px-8 py-3 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          className="inline-flex min-w-[140px] cursor-pointer items-center justify-center rounded-full bg-zinc-900 px-8 py-3 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
         >
           Go to setup
         </Link>
@@ -366,24 +434,30 @@ export default function AnagramsPage() {
   }
 
   return (
-    <div className="relative flex min-h-full flex-col items-center bg-white px-6 py-10 dark:bg-zinc-950">
+    <div className="flex min-h-full flex-1 flex-col bg-zinc-50 px-4 pb-8 pt-10 dark:bg-zinc-950 sm:px-8">
+      <header className="mb-6 flex w-full items-center justify-between gap-4">
+        <Link
+          href="/home"
+          className="text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-50"
+        >
+          ← Back to games
+        </Link>
+        <h1 className="text-center text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-3xl">
+          Anagrams
+        </h1>
+        <div className="flex w-[120px] justify-end sm:w-[140px]">
+          <RulesDropdown />
+        </div>
+      </header>
 
-      {/* EDGE HEADER */}
-      <div className="absolute top-6 left-0 w-full px-6 flex justify-between">
-        <Link href="/home">← Back to games</Link>
-        <RulesDropdown />
-      </div>
-
-      <div className="w-full max-w-md flex flex-col items-center">
-        <h1 className="mb-8 text-2xl font-bold">Anagrams</h1>
-
+      <main className="flex flex-1 flex-col items-center gap-6">
         <AnagramGame
           key={bankKey}
           words={words}
           bankKey={bankKey}
           onGoHome={() => router.push("/home")}
         />
-      </div>
+      </main>
     </div>
   );
 }

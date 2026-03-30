@@ -6,7 +6,7 @@ import { PREMADE_WORDS, type Grade, type Topic } from "../premadeWords";
 import { useGameWords } from "../gameWords";
 
 export default function SetupPage() {
-  const { words, setWords, setGrade: setCtxGrade } = useGameWords();
+  const { words, setWords, setGrade: setCtxGrade, setTopic: setCtxTopic } = useGameWords();
   const [grade, setGrade] = useState<Grade>("1");
   const [topic, setTopic] = useState<Topic>("animals");
 
@@ -15,7 +15,8 @@ export default function SetupPage() {
   useEffect(() => {
     setWords([...premade]);
     setCtxGrade(grade);
-  }, [premade, setWords, grade, setCtxGrade]);
+    setCtxTopic(topic);
+  }, [premade, setWords, grade, topic, setCtxGrade, setCtxTopic]);
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-zinc-50 px-6 pb-16 pt-10 dark:bg-zinc-950">
@@ -28,7 +29,7 @@ export default function SetupPage() {
         </Link>
       </div>
       <h1 className="text-center text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-        Spelling Central
+        Spelling Central 2
       </h1>
 
       <main className="mx-auto mt-8 w-full max-w-5xl">
@@ -66,7 +67,7 @@ export default function SetupPage() {
                 next[i] = e.target.value;
                 setWords(next);
               }}
-              className="h-11 w-56 rounded-md border border-zinc-300 bg-white px-3 text-zinc-900 outline-none ring-offset-2 focus:ring-2 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:ring-zinc-600"
+              className="h-11 w-56 rounded-md border border-zinc-300 bg-white px-3 text-zinc-900 outline-none hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800"
             />
           ))}
 

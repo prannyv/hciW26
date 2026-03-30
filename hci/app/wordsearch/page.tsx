@@ -189,13 +189,21 @@ function getCellsInLine(
 
 function RulesDropdown() {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
 
   return (
-    <div ref={ref} className="relative">
+    <div
+      className="relative"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocusCapture={() => setOpen(true)}
+      onBlurCapture={(e) => {
+        const next = e.relatedTarget as Node | null;
+        if (!e.currentTarget.contains(next)) setOpen(false);
+      }}
+    >
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onFocus={() => setOpen(true)}
         aria-expanded={open}
         aria-label="How to play"
         className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-zinc-300 bg-white text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800"
@@ -203,19 +211,16 @@ function RulesDropdown() {
         ?
       </button>
       {open && (
-        <>
-          <div className="fixed inset-0 z-10" aria-hidden onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-            <p className="mb-1 text-sm font-semibold text-zinc-900 dark:text-zinc-50">How to play</p>
-            <ul className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
-              <li>• Find all the hidden words in the letter grid.</li>
-              <li>• Words can go horizontally, vertically, or diagonally.</li>
-              <li>• Click a starting letter, then drag to the ending letter.</li>
-              <li>• Found words will be highlighted and crossed off the list.</li>
-              <li>• Find all words to win!</li>
-            </ul>
-          </div>
-        </>
+        <div className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+          <p className="mb-1 text-sm font-semibold text-zinc-900 dark:text-zinc-50">How to play</p>
+          <ul className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+            <li>• Find all the hidden words in the letter grid.</li>
+            <li>• Words can go horizontally, vertically, or diagonally.</li>
+            <li>• Click a starting letter, then drag to the ending letter.</li>
+            <li>• Found words will be highlighted and crossed off the list.</li>
+            <li>• Find all words to win!</li>
+          </ul>
+        </div>
       )}
     </div>
   );
