@@ -14,10 +14,12 @@ function GameCard({
   href,
   label,
   game,
+  className,
 }: {
   href: string;
   label: string;
   game: GameSlug;
+  className?: string;
 }) {
   const { words } = useGameWords();
   const completionsVersion = useGameCompletionsVersion();
@@ -28,7 +30,7 @@ function GameCard({
   return (
     <Link
       href={href}
-      className="relative flex min-h-[160px] items-center justify-center rounded-2xl border border-zinc-200 bg-white p-8 text-center text-2xl font-semibold text-zinc-900 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800"
+      className={`relative flex min-h-[160px] items-center justify-center rounded-2xl border border-zinc-200 bg-white p-8 text-center text-2xl font-semibold text-zinc-900 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800 ${className ?? ""}`}
     >
       {done && (
         <span
@@ -57,20 +59,22 @@ export default function HomePage() {
       </div>
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center">
         <div className="flex flex-wrap justify-center gap-6">
-          {[
-            { href: "/wordsearch", label: "Word Search" },
-            { href: "/alphabetical", label: "Alphabetical" },
-            { href: "/anagrams", label: "Anagrams" },
-            { href: "/missingletter", label: "Missing Letter" },
-            { href: "/wordsoup", label: "Word Soup" },
-          ].map(({ href, label }) => (
-            <Link
+          {(
+            [
+              { href: "/wordsearch", label: "Word Search", game: "wordsearch" as const },
+              { href: "/alphabetical", label: "Alphabetical", game: "alphabetical" as const },
+              { href: "/anagrams", label: "Anagrams", game: "anagrams" as const },
+              { href: "/missingletter", label: "Missing Letter", game: "missingletter" as const },
+              { href: "/wordsoup", label: "Word Soup", game: "wordsoup" as const },
+            ] satisfies { href: string; label: string; game: GameSlug }[]
+          ).map(({ href, label, game }) => (
+            <GameCard
               key={href}
               href={href}
-              className="flex min-h-[160px] w-full items-center justify-center rounded-2xl border border-zinc-200 bg-white p-8 text-center text-2xl font-semibold text-zinc-900 shadow-sm transition hover:bg-zinc-50 sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800"
-            >
-              {label}
-            </Link>
+              label={label}
+              game={game}
+              className="w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
+            />
           ))}
         </div>
       </main>

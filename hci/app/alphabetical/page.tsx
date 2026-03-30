@@ -317,9 +317,10 @@ function AlphabeticalPlay({
   );
 
   const handleDragStart = useCallback(() => {
+    setSelectedId(null);
+    setHeldId(null);
     // Two rAF calls let the browser paint the current colored state first,
     // so transition-colors can animate the change rather than jumping instantly.
-    setHeldId(null);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => setCheckStates([]));
     });

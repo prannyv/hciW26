@@ -153,8 +153,11 @@ function MissingLetterGame({
   const [showCongrats, setShowCongrats] = useState(false);
 
   const currentWord = gameWords[index] ?? null;
-  const answered = feedback === "correct" ? index + 1 : index;
-  const progress = gameWords.length > 0 ? (answered / gameWords.length) * 100 : 0;
+  // Use score for the bar: it matches "correct answers so far" and stays at N after the
+  // last word (index is not incremented when the game ends). The old index/feedback
+  // formula dropped to 90% after the final answer because feedback reset to idle while
+  // index stayed on the last word.
+  const progress = gameWords.length > 0 ? (score / gameWords.length) * 100 : 0;
 
   const letterData = useMemo(() => {
     if (!currentWord) return null;
