@@ -153,10 +153,6 @@ function MissingLetterGame({
   const [showCongrats, setShowCongrats] = useState(false);
 
   const currentWord = gameWords[index] ?? null;
-  // Use score for the bar: it matches "correct answers so far" and stays at N after the
-  // last word (index is not incremented when the game ends). The old index/feedback
-  // formula dropped to 90% after the final answer because feedback reset to idle while
-  // index stayed on the last word.
   const progress = gameWords.length > 0 ? (score / gameWords.length) * 100 : 0;
 
   const letterData = useMemo(() => {
@@ -233,6 +229,14 @@ function MissingLetterGame({
 
   return (
     <>
+      {/* Flame bounce keyframe injected once */}
+      <style>{`
+        @keyframes flameBounce {
+          from { transform: translateY(0) scale(1); }
+          to   { transform: translateY(-3px) scale(1.15); }
+        }
+      `}</style>
+
       {showCongrats && (
         <CongratsModal
           score={score}
@@ -249,7 +253,15 @@ function MissingLetterGame({
             <span>Word {Math.min(index + 1, gameWords.length)} of {gameWords.length}</span>
             <div className="flex items-center gap-3">
               {streak >= 2 && (
-                <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-600 dark:bg-orange-900/40 dark:text-orange-400">
+                <span className="flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-600 dark:bg-orange-900/40 dark:text-orange-400">
+                  <span
+                    style={{
+                      display: "inline-block",
+                      animation: "flameBounce 0.6s ease-in-out infinite alternate",
+                    }}
+                  >
+                    🔥
+                  </span>
                   {streak} streak
                 </span>
               )}
