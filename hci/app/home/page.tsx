@@ -56,12 +56,22 @@ export default function HomePage() {
         </Link>
       </div>
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center">
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <GameCard href="/wordsearch" label="Word Search" game="wordsearch" />
-          <GameCard href="/alphabetical" label="Alphabetical" game="alphabetical" />
-          <GameCard href="/anagrams" label="Anagrams" game="anagrams" />
-          <GameCard href="/missingletter" label="Missing Letter" game="missingletter" />
-          <GameCard href="/wordsoup" label="Word Soup" game="wordsoup" />
+        <div className="flex flex-wrap justify-center gap-6">
+          {[
+            { href: "/wordsearch", label: "Word Search" },
+            { href: "/alphabetical", label: "Alphabetical" },
+            { href: "/anagrams", label: "Anagrams" },
+            { href: "/missingletter", label: "Missing Letter" },
+            { href: "/wordsoup", label: "Word Soup" },
+          ].map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              className="flex min-h-[160px] w-full items-center justify-center rounded-2xl border border-zinc-200 bg-white p-8 text-center text-2xl font-semibold text-zinc-900 shadow-sm transition hover:bg-zinc-50 sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800"
+            >
+              {label}
+            </Link>
+          ))}
         </div>
       </main>
     </div>

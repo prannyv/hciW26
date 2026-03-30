@@ -49,7 +49,7 @@ function boxClasses(
   isHeld: boolean,
 ): string {
   const base =
-    "flex flex-col items-center justify-center gap-1 rounded-xl border px-3 py-3 text-center shadow-sm touch-none transition-colors duration-700 cursor-grab active:cursor-grabbing select-none";
+    "flex flex-col items-center justify-center gap-1 rounded-xl border px-3 py-3 text-center shadow-sm touch-none transition-colors duration-700 cursor-grab active:cursor-grabbing select-none outline-none";
 
   if (isLifted) {
     return `${base} border-zinc-400 bg-zinc-200 shadow-md ring-2 ring-zinc-400/80 dark:border-zinc-500 dark:bg-zinc-600 dark:ring-zinc-400/50`;
@@ -366,7 +366,13 @@ function AlphabeticalPlay({
         <CongratsModal onPlayAgain={handlePlayAgain} onGoHome={onGoHome} />
       )}
 
-      <main className="flex w-full flex-1 flex-col">
+      <main
+        className="flex w-full flex-1 flex-col"
+        onMouseDown={(e) => {
+          const tag = (e.target as HTMLElement).closest("button, a, input, select, textarea");
+          if (!tag) { e.preventDefault(); gridRef.current?.focus(); }
+        }}
+      >
         {items.length < 20 && bankWordCount < 20 && (
           <p className="mb-4 text-center text-sm text-zinc-600 dark:text-zinc-400">
             Add more words in setup to always get 20 here.
@@ -382,7 +388,7 @@ function AlphabeticalPlay({
           <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
             <div
               ref={gridRef}
-              className="rounded-lg p-1 outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-500"
+              className="rounded-lg p-1 outline-none"
               tabIndex={0}
               role="group"
               aria-label="Word tiles. Arrow keys move selection. Space to pick up or drop a tile. Drag tiles to reorder."
@@ -398,7 +404,7 @@ function AlphabeticalPlay({
                     checkState={checkStates[i] ?? "idle"}
                     isSelected={item.id === selectedId}
                     isHeld={item.id === heldId}
-                    onSelect={() => setSelectedId(item.id)}
+                    onSelect={() => { setSelectedId(item.id); gridRef.current?.focus(); }}
                   />
                 ))}
               </div>
