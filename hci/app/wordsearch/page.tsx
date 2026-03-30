@@ -11,19 +11,36 @@ type Direction = "H" | "V" | "D-SE" | "D-SW" | "D-NE" | "D-NW";
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const DIRECTIONS: Direction[] = ["H", "V", "D-SE", "D-SW", "D-NE", "D-NW"];
 
+/** Light grey tints so words stay distinguishable but read clearly as “done”. */
 const FOUND_COLORS = [
-  "bg-emerald-300/60 dark:bg-emerald-600/40",
-  "bg-sky-300/60 dark:bg-sky-600/40",
-  "bg-amber-300/60 dark:bg-amber-600/40",
-  "bg-rose-300/60 dark:bg-rose-600/40",
-  "bg-violet-300/60 dark:bg-violet-600/40",
-  "bg-teal-300/60 dark:bg-teal-600/40",
-  "bg-orange-300/60 dark:bg-orange-600/40",
-  "bg-indigo-300/60 dark:bg-indigo-600/40",
-  "bg-pink-300/60 dark:bg-pink-600/40",
-  "bg-lime-300/60 dark:bg-lime-600/40",
-  "bg-cyan-300/60 dark:bg-cyan-600/40",
-  "bg-fuchsia-300/60 dark:bg-fuchsia-600/40",
+  "bg-zinc-200 text-zinc-800 dark:bg-zinc-600 dark:text-zinc-100",
+  "bg-neutral-200 text-neutral-800 dark:bg-neutral-600 dark:text-neutral-100",
+  "bg-stone-200 text-stone-800 dark:bg-stone-600 dark:text-stone-100",
+  "bg-slate-200 text-slate-800 dark:bg-slate-600 dark:text-slate-100",
+  "bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-100",
+  "bg-zinc-300/80 text-zinc-900 dark:bg-zinc-500 dark:text-zinc-50",
+  "bg-neutral-300/80 text-neutral-900 dark:bg-neutral-500 dark:text-neutral-50",
+  "bg-stone-300/80 text-stone-900 dark:bg-stone-500 dark:text-stone-50",
+  "bg-slate-300/80 text-slate-900 dark:bg-slate-500 dark:text-slate-50",
+  "bg-gray-300/80 text-gray-900 dark:bg-gray-500 dark:text-gray-50",
+  "bg-zinc-200/90 text-zinc-800 dark:bg-zinc-600/90 dark:text-zinc-100",
+  "bg-neutral-200/90 text-neutral-800 dark:bg-neutral-600/90 dark:text-neutral-100",
+];
+
+/** Pastel shades while dragging (rotates each new selection). */
+const DRAG_PASTELS = [
+  "bg-emerald-300/70 text-zinc-900 ring-[3px] ring-emerald-400/80 dark:bg-emerald-600/45 dark:text-zinc-50 dark:ring-emerald-500/50 z-10",
+  "bg-sky-300/70 text-zinc-900 ring-[3px] ring-sky-400/80 dark:bg-sky-600/45 dark:text-zinc-50 dark:ring-sky-500/50 z-10",
+  "bg-amber-300/70 text-zinc-900 ring-[3px] ring-amber-400/80 dark:bg-amber-600/45 dark:text-zinc-50 dark:ring-amber-500/50 z-10",
+  "bg-rose-300/70 text-zinc-900 ring-[3px] ring-rose-400/80 dark:bg-rose-600/45 dark:text-zinc-50 dark:ring-rose-500/50 z-10",
+  "bg-violet-300/70 text-zinc-900 ring-[3px] ring-violet-400/80 dark:bg-violet-600/45 dark:text-zinc-50 dark:ring-violet-500/50 z-10",
+  "bg-teal-300/70 text-zinc-900 ring-[3px] ring-teal-400/80 dark:bg-teal-600/45 dark:text-zinc-50 dark:ring-teal-500/50 z-10",
+  "bg-orange-300/70 text-zinc-900 ring-[3px] ring-orange-400/80 dark:bg-orange-600/45 dark:text-zinc-50 dark:ring-orange-500/50 z-10",
+  "bg-indigo-300/70 text-zinc-900 ring-[3px] ring-indigo-400/80 dark:bg-indigo-600/45 dark:text-zinc-50 dark:ring-indigo-500/50 z-10",
+  "bg-pink-300/70 text-zinc-900 ring-[3px] ring-pink-400/80 dark:bg-pink-600/45 dark:text-zinc-50 dark:ring-pink-500/50 z-10",
+  "bg-lime-300/70 text-zinc-900 ring-[3px] ring-lime-400/80 dark:bg-lime-600/45 dark:text-zinc-50 dark:ring-lime-500/50 z-10",
+  "bg-cyan-300/70 text-zinc-900 ring-[3px] ring-cyan-400/80 dark:bg-cyan-600/45 dark:text-zinc-50 dark:ring-cyan-500/50 z-10",
+  "bg-fuchsia-300/70 text-zinc-900 ring-[3px] ring-fuchsia-400/80 dark:bg-fuchsia-600/45 dark:text-zinc-50 dark:ring-fuchsia-500/50 z-10",
 ];
 
 function shuffle<T>(arr: T[]): T[] {
@@ -284,6 +301,8 @@ function WordSearchGame({
   const [showCongrats, setShowCongrats] = useState(false);
   const draggingRef = useRef(false);
   const colorIndexRef = useRef(0);
+  const dragPaletteRef = useRef(0);
+  const [dragPreviewClass, setDragPreviewClass] = useState(DRAG_PASTELS[0]);
 
   useEffect(() => {
     setFoundWords(new Set());
@@ -293,6 +312,8 @@ function WordSearchGame({
     setWrongFlash(false);
     setShowCongrats(false);
     colorIndexRef.current = 0;
+    dragPaletteRef.current = 0;
+    setDragPreviewClass(DRAG_PASTELS[0]);
   }, [gameId]);
 
   useEffect(() => {
@@ -359,6 +380,9 @@ function WordSearchGame({
         tryComplete(r, c);
         return;
       }
+      const idx = dragPaletteRef.current % DRAG_PASTELS.length;
+      dragPaletteRef.current += 1;
+      setDragPreviewClass(DRAG_PASTELS[idx]);
       draggingRef.current = true;
       setStartCell([r, c]);
       setHoverCell([r, c]);
@@ -457,8 +481,7 @@ function WordSearchGame({
                 bg = "bg-red-400 dark:bg-red-600 text-white";
                 ring = "ring-[3px] ring-red-400 dark:ring-red-600 z-10";
               } else if (isPreview && !foundColor) {
-                bg = "bg-zinc-400 dark:bg-zinc-500 text-white";
-                ring = "ring-[3px] ring-zinc-400 dark:ring-zinc-500 z-10";
+                bg = dragPreviewClass;
               }
 
               return (

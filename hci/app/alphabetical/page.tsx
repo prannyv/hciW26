@@ -49,7 +49,7 @@ function boxClasses(
   isHeld: boolean,
 ): string {
   const base =
-    "flex flex-col items-center justify-center gap-1 rounded-xl border px-3 py-3 text-center shadow-sm touch-none transition-colors duration-700 cursor-grab active:cursor-grabbing select-none outline-none";
+    "flex flex-col items-center justify-center gap-1 rounded-xl border px-3 py-3 text-center shadow-sm touch-none cursor-grab active:cursor-grabbing select-none outline-none";
 
   if (isLifted) {
     return `${base} border-zinc-400 bg-zinc-200 shadow-md ring-2 ring-zinc-400/80 dark:border-zinc-500 dark:bg-zinc-600 dark:ring-zinc-400/50`;
@@ -60,9 +60,9 @@ function boxClasses(
   if (checkState === "idle" && isSelected) {
     return `${base} border-zinc-200 bg-white ring-2 ring-blue-500 ring-offset-2 ring-offset-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:ring-blue-400 dark:ring-offset-zinc-950`;
   }
-  if (checkState === "correct") return `${base} border-green-800 bg-green-900`;
-  if (checkState === "incorrect") return `${base} border-red-800 bg-red-900`;
-  return `${base} border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900`;
+  if (checkState === "correct") return `${base} transition-colors duration-500 border-green-800 bg-green-900`;
+  if (checkState === "incorrect") return `${base} transition-colors duration-500 border-red-800 bg-red-900`;
+  return `${base} transition-colors duration-200 border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900`;
 }
 
 function numberClasses(checkState: CheckState, isLifted: boolean): string {

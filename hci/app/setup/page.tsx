@@ -6,7 +6,7 @@ import { PREMADE_WORDS, type Grade, type Topic } from "../premadeWords";
 import { useGameWords } from "../gameWords";
 
 export default function SetupPage() {
-  const { words, setWords } = useGameWords();
+  const { words, setWords, setGrade: setCtxGrade } = useGameWords();
   const [grade, setGrade] = useState<Grade>("1");
   const [topic, setTopic] = useState<Topic>("animals");
 
@@ -14,7 +14,8 @@ export default function SetupPage() {
 
   useEffect(() => {
     setWords([...premade]);
-  }, [premade, setWords]);
+    setCtxGrade(grade);
+  }, [premade, setWords, grade, setCtxGrade]);
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-zinc-50 px-6 pb-16 pt-10 dark:bg-zinc-950">
@@ -36,11 +37,11 @@ export default function SetupPage() {
             value={grade}
             onChange={(e) => setGrade(e.target.value as Grade)}
             className="h-11 w-56 rounded-md border border-zinc-300 bg-white px-3 text-zinc-900 outline-none ring-offset-2 focus:ring-2 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:ring-zinc-600"
-            aria-label="Grade level"
+            aria-label="Difficulty level"
           >
-            <option value="1">Grade 1</option>
-            <option value="2">Grade 2</option>
-            <option value="3">Grade 3</option>
+            <option value="1">Beginner</option>
+            <option value="2">Intermediate</option>
+            <option value="3">Advanced</option>
           </select>
 
           <select
