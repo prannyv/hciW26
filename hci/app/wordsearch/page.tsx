@@ -279,7 +279,6 @@ function WordSearchGame({ words, bankKey, onGoHome }: any) {
   const progress = (foundWords.size / gameWords.length) * 100;
 
   return (
-    
     <>
       <style jsx>{`
         @keyframes wiggle {
@@ -294,6 +293,7 @@ function WordSearchGame({ words, bankKey, onGoHome }: any) {
           animation: wiggle 0.25s ease-in-out;
         }
       `}</style>
+      
       {showCongrats && (
         <CongratsModal
           score={foundWords.size}
@@ -304,6 +304,7 @@ function WordSearchGame({ words, bankKey, onGoHome }: any) {
       )}
 
       <main className="flex w-full flex-1 flex-col items-center gap-6">
+        {/* Progress bar */}
         <div className="w-full max-w-md">
           <div className="mb-1 flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
             <span>Words Found</span>
@@ -317,84 +318,93 @@ function WordSearchGame({ words, bankKey, onGoHome }: any) {
           </div>
         </div>
 
-        <div className="flex justify-center">
-          <div 
-            className="grid gap-0.5 rounded-xl border-2 border-zinc-200 bg-zinc-100 p-1.5 dark:border-zinc-700 dark:bg-zinc-800"
-            style={{ 
-              gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
-              width: 'fit-content'
-            }}
-          >
-            {grid.map((row, r) =>
-              row.map((letter, c) => {
-                const key = cellKey(r, c);
-                const isFound = foundCells.has(key);
-                const isSelected = selectedCells.some(([sr, sc]) => sr === r && sc === c);
-                const isStart = startCell && startCell[0] === r && startCell[1] === c;
+        {/* Grid and Word List side by side */}
+        <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-start lg:justify-center">
+          {/* Grid */}
+          <div className="flex justify-center">
+            <div 
+              className="grid gap-0.5 rounded-xl border-2 border-zinc-200 bg-zinc-100 p-1.5 dark:border-zinc-700 dark:bg-zinc-800"
+              style={{ 
+                gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
+                width: 'fit-content'
+              }}
+            >
+              {grid.map((row, r) =>
+                row.map((letter, c) => {
+                  const key = cellKey(r, c);
+                  const isFound = foundCells.has(key);
+                  const isSelected = selectedCells.some(([sr, sc]) => sr === r && sc === c);
+                  const isStart = startCell && startCell[0] === r && startCell[1] === c;
 
-                let bg = "bg-white dark:bg-zinc-900";
-                if (isFound) bg = "bg-green-500 dark:bg-green-600 text-white";
-                else if (wrongFlash && isSelected) bg = "bg-red-400 dark:bg-red-600 text-white";
-                else if (isStart) bg = "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900";
-                else if (isSelected) bg = "bg-zinc-300 dark:bg-zinc-600";
+                  let bg = "bg-white dark:bg-zinc-900";
+                  if (isFound) bg = "bg-green-500 dark:bg-green-600 text-white";
+                  else if (wrongFlash && isSelected) bg = "bg-red-400 dark:bg-red-600 text-white";
+                  else if (isStart) bg = "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900";
+                  else if (isSelected) bg = "bg-zinc-300 dark:bg-zinc-600";
 
-                return (
-                  <button
-                    key={key}
-                    onMouseDown={() => {
-                      setStartCell([r, c]);
-                      setCurrentCell([r, c]);
-                      setIsDragging(true);
-                    }}
-                    onMouseEnter={() => {
-                      if (isDragging) setCurrentCell([r, c]);
-                    }}
-                    onMouseUp={() => tryComplete([r, c])}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      setStartCell(null);
-                      setCurrentCell(null);
-                      setIsDragging(false);
-                    }}
-                    className={`flex items-center justify-center rounded-md font-bold select-none transition-all duration-150 ${bg} ${
-                      !isFound ? "cursor-pointer" : "cursor-default"
-                    } ${
-                      !isFound && isSelected ? "wiggle scale-110" : !isFound ? "hover:wiggle hover:scale-110" : ""
-                    }`}
-                    style={{
-                      width: `clamp(28px, ${Math.floor(360 / GRID_SIZE)}px, 44px)`,
-                      height: `clamp(28px, ${Math.floor(360 / GRID_SIZE)}px, 44px)`,
-                      fontSize: `clamp(0.7rem, ${Math.floor(280 / GRID_SIZE)}px, 1.1rem)`,
-                    }}
-                    
-                  >
-                    {letter}
-                  </button>
-                );
-              })
-            )}
+                  return (
+                    <button
+                      key={key}
+                      onMouseDown={() => {
+                        if (isFound) return;
+                        setStartCell([r, c]);
+                        setCurrentCell([r, c]);
+                        setIsDragging(true);
+                      }}
+                      onMouseEnter={() => {
+                        if (isDragging && !isFound) setCurrentCell([r, c]);
+                      }}
+                      onMouseUp={() => {
+                        if (isFound) return;
+                        tryComplete([r, c]);
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setStartCell(null);
+                        setCurrentCell(null);
+                        setIsDragging(false);
+                      }}
+                      className={`flex items-center justify-center rounded-md font-bold select-none transition-all duration-150 ${bg} ${
+                        !isFound ? "cursor-pointer" : "cursor-default"
+                      } ${
+                        !isFound && isSelected ? "wiggle scale-110" : !isFound ? "hover:wiggle hover:scale-110" : ""
+                      }`}
+                      style={{
+                        width: `clamp(28px, ${Math.floor(360 / GRID_SIZE)}px, 44px)`,
+                        height: `clamp(28px, ${Math.floor(360 / GRID_SIZE)}px, 44px)`,
+                        fontSize: `clamp(0.7rem, ${Math.floor(280 / GRID_SIZE)}px, 1.1rem)`,
+                      }}
+                      disabled={isFound}
+                    >
+                      {letter}
+                    </button>
+                  );
+                })
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className="w-full max-w-md">
-          <div className="font-semibold mb-3 text-sm text-zinc-600 dark:text-zinc-400">Words to find</div>
-          <div className="grid grid-cols-2 gap-2">
-            {gameWords.map((w: string) => {
-              const upper = w.toUpperCase();
-              const found = foundWords.has(upper);
-              return (
-                <div
-                  key={upper}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                    found 
-                      ? "line-through opacity-50 text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800" 
-                      : "text-zinc-900 dark:text-zinc-50 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700"
-                  }`}
-                >
-                  {upper}
-                </div>
-              );
-            })}
+          {/* Word List */}
+          <div className="w-full min-w-[200px] max-w-md lg:w-auto">
+            <div className="font-semibold mb-3 text-sm text-zinc-600 dark:text-zinc-400">Words to find</div>
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+              {gameWords.map((w: string) => {
+                const upper = w.toUpperCase();
+                const found = foundWords.has(upper);
+                return (
+                  <div
+                    key={upper}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                      found 
+                        ? "line-through opacity-50 text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800" 
+                        : "text-zinc-900 dark:text-zinc-50 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700"
+                    }`}
+                  >
+                    {upper}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
