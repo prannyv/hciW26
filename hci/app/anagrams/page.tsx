@@ -231,22 +231,18 @@ function AnagramGame({
     } else {
       setStreak(0);
       setStatus("wrong");
-      setMessage(`Incorrect — the correct word was: ${currentWord.toUpperCase()}`);
+      setMessage(`Incorrect — try again!`);
 
       setShake(true);
       setTimeout(() => setShake(false), 500);
 
-      setSelected(
-        currentWord.split("").map((letter) => ({
-          id: crypto.randomUUID(),
-          letter,
-        }))
-      );
-
       setTimeout(() => {
-        const next = index + 1;
-        next >= gameWords.length ? setShowCongrats(true) : setIndex(next);
-      }, 1500);
+        setTiles(makeTiles(currentWord));
+        setSelected([]);
+        setStatus("idle");
+        setMessage("");
+        setRetryUsed(false);
+      }, 1200);
     }
   }, [selected, currentWord, retryUsed, index, gameWords.length, status, streak]);
 
@@ -302,7 +298,7 @@ function AnagramGame({
         <div className="flex w-full flex-1 flex-col items-center gap-8">
           <div className="w-full max-w-md">
             <div className="mb-1 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-              <span>Word {index + 1} of {gameWords.length}</span>
+              <span>Word {Math.min(score + 1, gameWords.length)} of {gameWords.length}</span>
               <div className="flex items-center gap-3">
                 {streak >= 2 && (
                   <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-600 dark:bg-orange-900/40 dark:text-orange-400">
